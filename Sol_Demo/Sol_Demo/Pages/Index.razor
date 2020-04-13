@@ -1,0 +1,100 @@
+﻿@page "/"
+@using Sol_Demo.Models
+
+@inject ICityService cityService
+@*@<Sol_Demo.Components.MultiSelectComponent
+                                              ItemSource="CityList"
+                                              PropertyValue="Id"
+                                              PropertyText="CityName">
+
+    </Sol_Demo.Components.MultiSelectComponent>*@
+
+@if (CityList == null)
+{
+    <h1>Loading....</h1>
+}
+else
+{
+    <div class="container">
+        <div class="row">
+            <div class="col-6">
+                <MultiSelectComponent
+                                      ItemSource="@CityList"
+                                      CssClass="@CssClass"
+                                      @bind-SelectedItems="SelectedItems"
+                                      >
+
+                </MultiSelectComponent>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-6">
+                <button class="btn btn-danger" @onclick="DisplaySelectedCountry">Submit</button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-6">
+                @if (IsDisplaySelectedItem == true)
+                {
+                    <ul>
+                        @foreach(var city in GetSelectedItemsForDisplay)
+                        {
+                            <li>@city.Text </li>
+                        }
+                    </ul>
+                }
+            </div>
+        </div>
+    </div>
+
+}
+
+
+
+@code{
+
+    private List<SelectedItemList> CityList { get; set; }
+
+    private List<int> SelectedItems { get; set; }
+
+    private String CssClass { get; set; }
+
+    private bool IsDisplaySelectedItem { get; set; }
+
+    private List<SelectedItemList> GetSelectedItemsForDisplay { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            CityList =
+                (await cityService?.GetCityDataAsync())
+                ?.Select((leCityModel) => new SelectedItemList()
+                {
+                    Text = leCityModel.CityName,
+                    Value = leCityModel.Id
+                })
+                ?.ToList();
+
+            CssClass = "form-control js-example-basic-multiple";
+            //CssClass = "form-control";
+
+            StateHasChanged();
+        }
+    }
+
+    private void DisplaySelectedCountry()
+    {
+        IsDisplaySelectedItem = true;
+
+        var filterData =
+               CityList
+               ?.AsEnumerable()
+               ?.Where((leSelectedItem) => SelectedItems.Select((leId) => leId).Contains(leSelectedItem.Value))
+               ?.ToList();
+
+        GetSelectedItemsForDisplay = filterData;
+    }
+
+
+}

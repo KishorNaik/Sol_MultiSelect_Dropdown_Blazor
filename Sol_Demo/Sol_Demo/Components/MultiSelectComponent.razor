@@ -1,0 +1,116 @@
+﻿@*@typeparam TItem
+
+    @if(ItemSource?.Count()>=0)
+    {
+        <select class="@CssClass">
+            <option value="">-- Select Country --</option>
+            @foreach (var item in ItemSource)
+            {
+                int propertyValue =(int) item.GetType().GetProperty(PropertyValue).GetValue(item, null);
+                string propertyText = item.GetType().GetProperty(PropertyText).GetValue(item, null) as string ;
+
+                <option value="@propertyValue">@propertyText</option>
+            }
+        </select>
+    }
+
+    @code {
+
+        [Parameter]
+        public String CssClass { get; set; }
+
+        [Parameter]
+        public String PropertyValue { get; set; }
+
+        [Parameter]
+        public String PropertyText { get; set; }
+
+        [Parameter]
+        public IEnumerable<TItem> ItemSource { get; set; }
+
+
+    }*@
+
+@inject IJSRuntime JSRuntime
+
+
+
+@if (ItemSource?.Count() >= 0)
+{
+    <select @ref="SelectElement" class="@CssClass" multiple>
+        
+        @foreach (var item in ItemSource)
+        {
+            <option value="@item.Value">@item.Text</option>
+        }
+    </select>
+}
+
+
+
+@code{
+
+    #region Prameters
+    [Parameter]
+    public IEnumerable<SelectedItemList> ItemSource { get; set; }
+
+    [Parameter]
+    public String CssClass { get; set; }
+
+    [Parameter]
+    public List<int> SelectedItems { get; set; }
+
+    [Parameter]
+    public EventCallback<List<int>> SelectedItemsChanged { get; set; }
+    #endregion 
+
+    public ElementReference SelectElement { get; set; }
+
+    private static Action<String> GetSelectedItemsDataAction { get; set; }
+
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await JSRuntime.InvokeVoidAsync(
+               identifier: "applySelect2JavascriptPlugin",
+               SelectElement
+                );
+
+            SelectedItems = new List<int>();
+
+            GetSelectedItemsDataAction = (leSelectedData) =>
+            {
+                InvokeAsync(async () => {
+
+                    if (SelectedItems != null)
+                    {
+                        SelectedItems.Add(Convert.ToInt32(leSelectedData));
+                    }
+
+                    await SelectedItemsChanged.InvokeAsync(SelectedItems);
+
+                    StateHasChanged();
+
+                } );
+
+            };
+
+            StateHasChanged();
+        }
+
+    }
+
+    [JSInvokable]
+    public static Task OnDropDownChangedEventJS(string id)
+    {
+        return Task.Run(() => GetSelectedItemsDataAction?.Invoke(id));
+    }
+
+
+
+
+
+}
